@@ -30,6 +30,7 @@ std::string EX_CALIB_RESULT_PATH;
 std::string VINS_RESULT_PATH;
 std::string OUTPUT_FOLDER;
 std::string IMU_TOPIC;
+std::string IMU_DATA_PATH;
 int ROW, COL;
 double TD;
 int NUM_OF_CAM;
@@ -112,6 +113,11 @@ void readParameters(std::string config_file)
     std::cout << "result path " << VINS_RESULT_PATH << std::endl;
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
+
+    IMU_DATA_PATH = OUTPUT_FOLDER + "/imu.csv";
+    std::cout << "imu data path" << IMU_DATA_PATH << std::endl;
+    std::ofstream fout_2(IMU_DATA_PATH, std::ios::out);
+    fout_2.close();
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)

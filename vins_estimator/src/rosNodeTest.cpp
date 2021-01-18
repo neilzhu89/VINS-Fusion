@@ -21,6 +21,8 @@
 #include "estimator/parameters.h"
 #include "utility/visualization.h"
 
+#define SAVE_IMU true
+
 Estimator estimator;
 
 queue<sensor_msgs::ImuConstPtr> imu_buf;
@@ -86,12 +88,12 @@ void sync_process()
                 if(time0 < time1 - 0.003)
                 {
                     img0_buf.pop();
-                    printf("throw img0\n");
+                    //printf("throw img0\n");
                 }
                 else if(time0 > time1 + 0.003)
                 {
                     img1_buf.pop();
-                    printf("throw img1\n");
+                    //printf("throw img1\n");
                 }
                 else
                 {
@@ -104,9 +106,16 @@ void sync_process()
                     //printf("find img0 and img1\n");
                 }
             }
+            //printf("In this section!\n");
             m_buf.unlock();
             if(!image0.empty())
-                estimator.inputImage(time, image0, image1);
+            {
+               //printf("Start estimator for stero!\n");
+               estimator.inputImage(time, image0, image1); 
+            }else{
+               //printf("This is end!\n");
+            }
+                
         }
         else
         {
@@ -123,7 +132,11 @@ void sync_process()
             }
             m_buf.unlock();
             if(!image.empty())
+            {
+                //printf("Start estimator for mono!\n");
                 estimator.inputImage(time, image);
+            }
+                
         }
 
         std::chrono::milliseconds dura(2);
@@ -144,6 +157,22 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     Vector3d acc(dx, dy, dz);
     Vector3d gyr(rx, ry, rz);
     estimator.inputIMU(t, acc, gyr);
+    if (SAVE_IMU)
+    {
+       ofstream imu_sensor_file(IMU_DATA_PATH, ios::app);
+       imu_sensor_file.setf(ios::fixed, ios::floatfield);
+       imu_sensor_file.precision(0);
+       imu_sensor_file << t * 1e9 << ",";
+       imu_sensor_file.precision(5);
+       imu_sensor_file << dx << ","
+              << dy << ","
+              << dz << ","
+              << rx << ","
+              << ry << ","
+              << rz << ","
+              << endl;
+       imu_sensor_file.close();
+    }
     return;
 }
 

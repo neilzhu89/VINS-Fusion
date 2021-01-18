@@ -1,0 +1,4 @@
+<launch>
+	<arg name="config_path" default = "$(find vins)/../config/realsense_d435i/realsense_stereo_imu_config_v2.yaml"/>
+	<node name="vins_node" pkg="vins" type="vins_node" args="$(arg config_path)" output="screen" launch-prefix="xterm -e gdb -ex run --args "/>
+</launch>

@@ -200,7 +200,7 @@ Visualization Manager:
           Radius: 0.0299999993
           Shaft Diameter: 0.100000001
           Shaft Length: 0.100000001
-          Topic: /vins_estimator/path
+          Topic: /vins_node/path
           Unreliable: false
           Value: true
         - Class: rviz/MarkerArray
@@ -273,7 +273,7 @@ Visualization Manager:
           Value: true
         - Class: rviz/Image
           Enabled: true
-          Image Topic: /vins_estimator/image_track
+          Image Topic: /vins_node/image_track
           Max Value: 1
           Median window: 5
           Min Value: 0
