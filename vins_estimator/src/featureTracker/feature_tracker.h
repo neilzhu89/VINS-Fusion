@@ -42,7 +42,7 @@ class FeatureTracker
 public:
     FeatureTracker();
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1 = cv::Mat());
-    void descriptorsMatch(vector<cv::DMatch> &match_pair, vector<cv::DMatch> &good_match_pair, vector<uchar> &match_status);
+    void descriptorsMatch(vector<cv::DMatch> &match_pair, vector<cv::DMatch> &good_match_pair);
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> trackImageORB(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1 = cv::Mat());
     void setMask();
     void readIntrinsicParameter(const vector<string> &calib_file);
@@ -104,6 +104,7 @@ public:
     cv::Mat imTrackORB;
     set<int> tracked_idx;
     cv::Mat imTrackPrevCur;
-    map<int, int> prev_kpts_id, prev_id_kpts;
-    map<int, int> cur_kpts_id, cur_id_kpts;
+    map<int, int> prev_kpts_id_map, prev_id_kpts_map;
+    map<int, int> cur_kpts_id_map, cur_id_kpts_map;
+    map<int, int> cur_prev_kpt_map;
 };

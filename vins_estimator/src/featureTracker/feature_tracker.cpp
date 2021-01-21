@@ -40,7 +40,7 @@ void reduceVector(vector<cv::Point2f> &v, vector<uchar> status)
 void reduceVector(vector<int> &v, vector<uchar> status)
 {
     int j = 0;
-    for (int i = 0; i < int(v.size()); i++)
+    for (int i = 0; i < int(v.size()); i+8+)
         if (status[i])
             v[j++] = v[i];
     v.resize(j);
@@ -51,6 +51,15 @@ void reduceVector(vector<cv::KeyPoint> &v, vector<uchar> status)
     int j = 0;
     for (int i = 0; i < int(v.size()); i++)
         if (status[i])
+            v[j++] = v[i];
+    v.resize(j);
+}
+
+void reduceVector(vector<pair<int, int>> &v, vector<uchar> status)
+{
+    int j = 0;
+    for (int i = 0; i < int(v.size()); i++)
+        if (status[i]
             v[j++] = v[i];
     v.resize(j);
 }
@@ -259,6 +268,38 @@ double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2)
     double dx = pt1.x - pt2.x;
     double dy = pt1.y - pt2.y;
     return sqrt(dx * dx + dy * dy);
+}
+
+void FeatureTracker::descriptorsMatch(vector<cv::DMatch> &match_pair, vector<cv::DMatch> &good_match_pair)
+{
+    good_match_pair.clear();
+    auto min_max = minmax_element(match_pair.begin(), match_pair.end(), [](const cv::DMatch &m1, const cv::DMatch &m2) { return m1.distance < m2.distance; });
+    double min_dist = min_max.first->distance;
+    double max_dist = min_max.second->distance;
+    for (int i = 0; i < int(match_pair.size()); i++) 
+    {
+        //int queryIdx = match_pair[i].queryIdx;
+        //int trainIdx = match_pair[i].trainIdx;
+        //int status_flag;
+        if (match_pair[i].distance <= max(2 * min_dist, 30.0))
+            good_match_pair.push_back(match_pair[i]);         
+        //match_status[queryIdx] = make_pair(trainIdx, status_flag);
+    }
+}
+
+void FeatureTracker::updateIds(vector<int> &ids, vector<pair<int, int>> &kpts_id, map<int, int> &id_kpts, vector<uchar> &status)
+{
+    map<int, int> kpts_id_clone = kpts_id.clone();
+    for (int k_id; k_id < int(status.size()); k_id++)
+    {
+        if(!s)
+        {
+            id = kpts_id_clone[k_id];
+            kpts_id.insert(make_pairt(id, k_id))
+            kpts_id.erase(k_id);
+            id_kpts.erase(id);
+        }
+    }
 }
 
 map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
@@ -475,28 +516,6 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     return featureFrame;
 }
 
-void FeatureTracker::descriptorsMatch(vector<cv::DMatch> &match_pair, vector<cv::DMatch> &good_match_pair, vector<uchar> &match_status)
-{
-    good_match_pair.clear();
-    auto min_max = minmax_element(match_pair.begin(), match_pair.end(), [](const cv::DMatch &m1, const cv::DMatch &m2) { return m1.distance < m2.distance; });
-    double min_dist = min_max.first->distance;
-    double max_dist = min_max.second->distance;
-    for (int i = 0; i < int(match_pair.size()); i++) 
-    {
-        //int queryIdx = match_pair[i].queryIdx;
-        //int trainIdx = match_pair[i].trainIdx;
-        //int status_flag;
-        if (match_pair[i].distance <= max(2 * min_dist, 30.0))
-        {
-            match_status.push_back(1);
-            good_match_pair.push_back(match_pair[i]);
-        }           
-        else
-            match_status.push_back(0);
-        //match_status[queryIdx] = make_pair(trainIdx, status_flag);
-    }
-}
-
 map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImageORB(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
 {
     TicToc t_r;
@@ -514,12 +533,8 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     }
     */
     //printf("Start read img!\n");
-    //prev_pts.clear();
     cur_pts.clear();
     tracked_idx.clear();
-    //cur_keypoints.clear();
-    //cur_descriptors.release();
-    //matches.clear();
     
     //printf("Start detection!\n");
 
@@ -534,7 +549,6 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     {
         TicToc t_o;
         vector<uchar> status;
-        //map<int, pair<int, int>> status;
         vector<float> err;
         if(hasPrediction)
             printf("In prediction branch");
@@ -737,7 +751,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     return featureFrame;
 }
 
-map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImageORB(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
+map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImageORBLR(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
 {
     TicToc t_r;
     cur_time = _cur_time;
@@ -746,40 +760,205 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     col = cur_img.cols;
     cv::Mat rightImg = _img1;
 
+    cur_kpts_id_map.clear();
+    cur_id_kpts_map.clear();
+    cur_pts.clear();
+
     // extract keypoints & descriptors
     orb -> detectAndCompute(cur_img, cv::noArray(), cur_keypoints, cur_descriptors);
 
     if (prev_pts.size() > 0)
     {
         TicToc t_o;
-        vector<uchar> status;
+        vector<uchar> status(cur_keypoints.size());
         vector<float> err;
         if(hasPrediction)
             printf("In prediction branch");
         else
-        {
-            
+        {            
             // match the descriptors from previous with which from current 
-            //printf("Start Match!\n");
+            // printf("Start Match!\n");
             matcher->match(cur_descriptors, prev_descriptors, matches, cv::noArray());
-            
-
             // descriptor filter
             //printf("Start filtering descriptor!\n");
-            //good_matches.clear();
-            // TO_DO re arrange good_matches.
-            descriptorsMatch(matches, good_matches, status);
-            printf("Finish filtering.\n");
-
-
-            
+            descriptorsMatch(matches, good_matches);
+            for (int i = 0; i < int(good_matches.size()); i++)
+            {
+                int prev_kid = good_matches[i].trainIdx;
+                int cur_kid = good_matches[i].queryIdx;
+                status[prev_id] = 1;
+                cur_prev_kpt_map.insert(make_pair(cur_kid, prev_kid));
+            }
+            //printf("Finish filtering.\n");            
         }
-        // update prev_kpts_id & prev_id_kpts
-        updateIds(ids, prev_kpts_id, prev_id_kpts, status);
 
+        // update prev_kpts_id_map & prev_id_kpts_map
+        // filt out unmatched prev_keypoints
+        for (int s = 0; s < int(status.size()); s++)
+        {
+            if (!status[s])
+                prev_kpts_id_map.erase(s);
+        }
+        
+        // build prev_id_kpts_map
+        prev_id_kpts_map.clear();
+        ids.clear();
+        for (int it = prev_kpts_id_map.begin(); it != prev_kpts_id_map.end()); i++)
+        {
+            int prev_kid = it->first;
+            int id = it->second;
+            prev_id_kpts_map.insert(make_pair(id, prev_kid));
+            ids.push_back(id)
+        }
+        if (SHOW_TRACK)
+            cv::drawMatches(prev_img, prev_keypoints, cur_img, cur_keypoints, good_matches, imTrackORB);
+    }
+    // build cur_kpt_id_map & cur_id_cur_map
+    for (int kid = 0; kid < int(cur_keypoint.size()); kid++)
+    {
+        map<int, int>::iterator curPrevIt
+        curPrevIt = cur_prev_kpt_map.find(kid);
+        if (curPrevIt != cur_prev_kpt_map.end())
+        {
+            int matched_prev_kid = curPrevIt -> second;
+            map<int, int>::iterator prevKIdIt; 
+            prevKIdIt = prev_kpts_id_map.find(matched_prev_kid);
+            int matched_id;
+            if (prevKIdIt != prev_kpts_id_map.end())
+            {
+                matched_id = prevKIdIt -> second;
+            }
+            cur_kpts_id_map.insert(make_pair(kid, matched_id));
+            cur_id_kpts_map.insert(make_pair(matched_id, kid));
 
+        }
+        else
+        {        
+            cur_kpts_id_map.insert(make_pair(kid, n_id));
+            cur_id_kpts_map.insert(make_pair(n_id, kid));
+            ids.push_back(n_id++);
+        }
+    }
 
+    for (int i = 0; i < int(ids.size()); i++)
+    {
+        int id = ids[i];
+        int cur_kid = cur_id_kpts_map[id];
+        cv::Keypoint cur_kpt = cur_keypoints[cur_kid];
+        cur_pts.push_back(cur_kpt.pt);
+    }
+    cur_un_pts = undistortedPts(cur_pts, m_camera[0]);
+    pts_velocity = ptsVelocity(ids, cur_un_pts, cur_un_pts_map, prev_un_pts_map);
+
+    // 
+    if(!_img1.empty() && stereo_cam)
+    {
+        ids_right.clear();
+        cur_right_pts.clear();
+        cur_un_right_pts.clear();
+        right_pts_velocity.clear();
+        cur_un_right_pts_map.clear();
+        if(!cur_pts.empty())
+        {
+            //printf("stereo image; track feature on right image\n");
+            vector<cv::Point2f> reverseLeftPts;
+            vector<uchar> status, statusRightLeft;
+            vector<float> err;
+            // cur left ---- cur right
+            cv::calcOpticalFlowPyrLK(cur_img, rightImg, cur_pts, cur_right_pts, status, err, cv::Size(21, 21), 3);
+            // reverse check cur right ---- cur left
+            if(FLOW_BACK)
+            {
+                cv::calcOpticalFlowPyrLK(rightImg, cur_img, cur_right_pts, reverseLeftPts, statusRightLeft, err, cv::Size(21, 21), 3);
+                for(size_t i = 0; i < status.size(); i++)
+                {
+                    if(status[i] && statusRightLeft[i] && inBorder(cur_right_pts[i]) && distance(cur_pts[i], reverseLeftPts[i]) <= 0.5)
+                        status[i] = 1;
+                    else
+                        status[i] = 0;
+                }
+            }
+
+            ids_right = ids;
+            reduceVector(cur_right_pts, status);
+            reduceVector(ids_right, status);
+            // only keep left-right pts
+            /*
+            reduceVector(cur_pts, status);
+            reduceVector(ids, status);
+            reduceVector(track_cnt, status);
+            reduceVector(cur_un_pts, status);
+            reduceVector(pts_velocity, status);
+            */
+            cur_un_right_pts = undistortedPts(cur_right_pts, m_camera[1]);
+            right_pts_velocity = ptsVelocity(ids_right, cur_un_right_pts, cur_un_right_pts_map, prev_un_right_pts_map);
+        }
+        prev_un_right_pts_map = cur_un_right_pts_map;
+    }
+    if(SHOW_TRACK)
+        drawTrack(cur_img, rightImg, ids, cur_pts, cur_right_pts, prevLeftPtsMap);
+
+    prev_img = cur_img;
+    prev_pts = cur_pts;
+    prev_un_pts = cur_un_pts;
+    prev_un_pts_map = cur_un_pts_map;
+    prev_time = cur_time;
+    hasPrediction = false;
+    prev_kpts_id_map = cur_kpts_id_map;
+    prev_id_kpts_map = cur_id_kpts_map;
+
+    prevLeftPtsMap.clear();
+    for(size_t i = 0; i < cur_pts.size(); i++)
+        prevLeftPtsMap[ids[i]] = cur_pts[i];
+
+    map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
+    for (size_t i = 0; i < ids.size(); i++)
+    {
+        int feature_id = ids[i];
+        double x, y ,z;
+        x = cur_un_pts[i].x;
+        y = cur_un_pts[i].y;
+        z = 1;
+        double p_u, p_v;
+        p_u = cur_pts[i].x;
+        p_v = cur_pts[i].y;
+        int camera_id = 0;
+        double velocity_x, velocity_y;
+        velocity_x = pts_velocity[i].x;
+        velocity_y = pts_velocity[i].y;
+
+        Eigen::Matrix<double, 7, 1> xyz_uv_velocity;
+        xyz_uv_velocity << x, y, z, p_u, p_v, velocity_x, velocity_y;
+        featureFrame[feature_id].emplace_back(camera_id,  xyz_uv_velocity);
+    }
+
+    if (!_img1.empty() && stereo_cam)
+    {
+        for (size_t i = 0; i < ids_right.size(); i++)
+        {
+            int feature_id = ids_right[i];
+            double x, y ,z;
+            x = cur_un_right_pts[i].x;
+            y = cur_un_right_pts[i].y;
+            z = 1;
+            double p_u, p_v;
+            p_u = cur_right_pts[i].x;
+            p_v = cur_right_pts[i].y;
+            int camera_id = 1;
+            double velocity_x, velocity_y;
+            velocity_x = right_pts_velocity[i].x;
+            velocity_y = right_pts_velocity[i].y;
+
+            Eigen::Matrix<double, 7, 1> xyz_uv_velocity;
+            xyz_uv_velocity << x, y, z, p_u, p_v, velocity_x, velocity_y;
+            featureFrame[feature_id].emplace_back(camera_id,  xyz_uv_velocity);
+        }
+    }
+
+    //printf("feature track whole time %f\n", t_r.toc());
+    return featureFrame;
 }
+
 
 void FeatureTracker::rejectWithF()
 {
