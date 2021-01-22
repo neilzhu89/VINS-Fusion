@@ -1,13 +1,13 @@
 #include <ros/ros.h>
-#include "estimator/estimator.h"
-#include "estimator/parameters.h"
-#include "utility/visualization.h"
+#include <iostream>
+#include <sensor_msgs/Imu.h>
+#include <fstream>
 
-#define SAVE_IMU true;
+#define SAVE_IMU true
 
-std::string OUTPUT_FOLDER = "/home/jing/catkin_fusion_ws/output/";
-std::string IMU_DATA_PATH = OUTPUT_FOLDER + "/imu.csv";
-std::string IMU_TOPIC = "/camera/imu";
+const std::string OUTPUT_FOLDER = "/home/jing/catkin_fusion_ws/output/";
+const std::string IMU_DATA_PATH = OUTPUT_FOLDER + "/imu.csv";
+const std::string IMU_TOPIC = "/camera/imu";
 
 void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 {
@@ -18,13 +18,11 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     double rx = imu_msg->angular_velocity.x;
     double ry = imu_msg->angular_velocity.y;
     double rz = imu_msg->angular_velocity.z;
-    Vector3d acc(dx, dy, dz);
-    Vector3d gyr(rx, ry, rz);
-    estimator.inputIMU(t, acc, gyr);
+
     if (SAVE_IMU)
     {
-       ofstream imu_sensor_file(IMU_DATA_PATH, ios::app);
-       imu_sensor_file.setf(ios::fixed, ios::floatfield);
+       std::ofstream imu_sensor_file(IMU_DATA_PATH, std::ios::app);
+       imu_sensor_file.setf(std::ios::fixed, std::ios::floatfield);
        imu_sensor_file.precision(0);
        imu_sensor_file << t * 1e9 << ",";
        imu_sensor_file.precision(5);
@@ -34,7 +32,7 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
               << rx << ","
               << ry << ","
               << rz << ","
-              << endl;
+              << std::endl;
        imu_sensor_file.close();
     }
     return;

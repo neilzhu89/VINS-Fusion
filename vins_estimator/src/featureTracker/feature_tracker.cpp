@@ -40,7 +40,7 @@ void reduceVector(vector<cv::Point2f> &v, vector<uchar> status)
 void reduceVector(vector<int> &v, vector<uchar> status)
 {
     int j = 0;
-    for (int i = 0; i < int(v.size()); i+8+)
+    for (int i = 0; i < int(v.size()); i++)
         if (status[i])
             v[j++] = v[i];
     v.resize(j);
@@ -59,7 +59,7 @@ void reduceVector(vector<pair<int, int>> &v, vector<uchar> status)
 {
     int j = 0;
     for (int i = 0; i < int(v.size()); i++)
-        if (status[i]
+        if (status[i])
             v[j++] = v[i];
     v.resize(j);
 }
@@ -284,21 +284,6 @@ void FeatureTracker::descriptorsMatch(vector<cv::DMatch> &match_pair, vector<cv:
         if (match_pair[i].distance <= max(2 * min_dist, 30.0))
             good_match_pair.push_back(match_pair[i]);         
         //match_status[queryIdx] = make_pair(trainIdx, status_flag);
-    }
-}
-
-void FeatureTracker::updateIds(vector<int> &ids, vector<pair<int, int>> &kpts_id, map<int, int> &id_kpts, vector<uchar> &status)
-{
-    map<int, int> kpts_id_clone = kpts_id.clone();
-    for (int k_id; k_id < int(status.size()); k_id++)
-    {
-        if(!s)
-        {
-            id = kpts_id_clone[k_id];
-            kpts_id.insert(make_pairt(id, k_id))
-            kpts_id.erase(k_id);
-            id_kpts.erase(id);
-        }
     }
 }
 
@@ -564,7 +549,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             printf("Start filtering descriptor!\n");
             //good_matches.clear();
             // TO_DO re arrange good_matches.
-            descriptorsMatch(matches, good_matches, status);
+            descriptorsMatch(matches, good_matches);
             printf("Finish filtering.\n");
 
             //printf("After filtering, prev_keypoints: %d, cur_keypoints: %d, good matches: %d.\n", int(prev_descriptors.rows), int(cur_descriptors.rows), int(good_matches.size()));

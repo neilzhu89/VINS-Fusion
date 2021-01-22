@@ -44,6 +44,7 @@ public:
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1 = cv::Mat());
     void descriptorsMatch(vector<cv::DMatch> &match_pair, vector<cv::DMatch> &good_match_pair);
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> trackImageORB(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1 = cv::Mat());
+    map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> trackImageORBLR(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1 = cv::Mat());
     void setMask();
     void readIntrinsicParameter(const vector<string> &calib_file);
     void showUndistortion(const string &name);
@@ -68,7 +69,7 @@ public:
     cv::Mat getTrackImage();
     //cv::Mat getTrackImageORB();
     bool inBorder(const cv::Point2f &pt);
-    void updataIdx(vector<int> &ids, map<int, int> kpts_id, map<int, int> id_kpts)
+    void updataIdx(vector<int> &ids, map<int, int> kpts_id, map<int, int> id_kpts);
     int row, col;
     cv::Mat imTrack;
     cv::Mat mask;
